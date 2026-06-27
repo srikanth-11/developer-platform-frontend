@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/PageHeader';
+import { useConfirm } from '@/components/confirm-context';
 import { useActiveOrg } from '@/features/organizations/active-org-context';
 import { useEarnings } from '@/features/marketplace/hooks';
 import { getApiErrorMessage } from '@/lib/api';
@@ -51,6 +52,7 @@ export function BillingPage() {
   const checkout = useCheckout(activeOrgId ?? '');
   const portal = usePortal(activeOrgId ?? '');
   const closeInvoice = useCloseInvoice(activeOrgId ?? '');
+  const confirm = useConfirm();
 
   const paymentsEnabled = !!config.data?.paymentsEnabled;
   const canChangePlan = roleAtLeast(activeOrg?.role, Role.OWNER);
@@ -81,7 +83,12 @@ export function BillingPage() {
   }, [activeOrgId]);
 
   async function handleSubscribe(plan: Plan, name: string) {
-    if (!window.confirm(`Switch ${activeOrg?.name} to the ${name} plan?`)) return;
+    const ok = await confirm({
+      title: `Switch to the ${name} plan?`,
+      description: `${activeOrg?.name ?? 'This organization'} will be moved to the ${name} plan.`,
+      confirmLabel: `Switch to ${name}`,
+    });
+    if (!ok) return;
     try {
       if (paymentsEnabled) {
         const res = await checkout.mutateAsync(plan);
@@ -110,7 +117,12 @@ export function BillingPage() {
   }
 
   async function handleCloseInvoice() {
-    if (!window.confirm('Close the current billing period into an invoice?')) return;
+    const ok = await confirm({
+      title: 'Close the current billing period?',
+      description: 'This finalizes usage so far into an invoice. This cannot be undone.',
+      confirmLabel: 'Close period',
+    });
+    if (!ok) return;
     try {
       await closeInvoice.mutateAsync();
       toast.success('Invoice created for the current period');

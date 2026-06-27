@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useConfirm } from '@/components/confirm-context';
 import { useApplications } from '@/features/applications/hooks';
 import { useActiveOrg } from '@/features/organizations/active-org-context';
 import { getApiErrorMessage } from '@/lib/api';
@@ -40,11 +41,18 @@ export function ApiKeysPage() {
   const revoke = useRevokeApiKey(activeOrgId ?? '', effectiveAppId ?? '');
   const rotate = useRotateApiKey(activeOrgId ?? '', effectiveAppId ?? '');
   const [revealed, setRevealed] = useState<CreatedApiKey | null>(null);
+  const confirm = useConfirm();
 
   const canManage = roleAtLeast(activeOrg?.role, Role.DEVELOPER);
 
   async function handleRevoke(id: string, name: string) {
-    if (!window.confirm(`Revoke key “${name}”? Clients using it will stop working.`)) return;
+    const ok = await confirm({
+      title: `Revoke key “${name}”?`,
+      description: 'Clients using it will stop working immediately.',
+      confirmLabel: 'Revoke key',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await revoke.mutateAsync(id);
       toast.success(`Key “${name}” revoked`);
@@ -54,8 +62,13 @@ export function ApiKeysPage() {
   }
 
   async function handleRotate(id: string, name: string) {
-    if (!window.confirm(`Rotate key “${name}”? The current secret stops working immediately.`))
-      return;
+    const ok = await confirm({
+      title: `Rotate key “${name}”?`,
+      description: 'The current secret stops working immediately and a new one is issued.',
+      confirmLabel: 'Rotate key',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       const created = await rotate.mutateAsync(id);
       setRevealed(created);

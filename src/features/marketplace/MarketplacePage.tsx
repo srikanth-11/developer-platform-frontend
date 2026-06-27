@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from '@/components/PageHeader';
+import { useConfirm } from '@/components/confirm-context';
 import { useActiveOrg } from '@/features/organizations/active-org-context';
 import { getApiErrorMessage } from '@/lib/api';
 import { Role, roleAtLeast } from '@/lib/enums';
@@ -31,6 +32,7 @@ export function MarketplacePage() {
   const subs = useSubscriptions(activeOrgId);
   const subscribe = useSubscribeToApi(activeOrgId ?? '');
   const unsubscribe = useUnsubscribe(activeOrgId ?? '');
+  const confirm = useConfirm();
 
   // Handle return from Stripe Checkout for a paid subscription.
   useEffect(() => {
@@ -68,7 +70,13 @@ export function MarketplacePage() {
   }
 
   async function handleUnsubscribe(subscriptionId: string, name: string) {
-    if (!window.confirm(`Unsubscribe from “${name}”?`)) return;
+    const ok = await confirm({
+      title: `Unsubscribe from “${name}”?`,
+      description: 'You will lose access to this API. You can re-subscribe later.',
+      confirmLabel: 'Unsubscribe',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await unsubscribe.mutateAsync(subscriptionId);
       toast.success(`Unsubscribed from “${name}”`);
