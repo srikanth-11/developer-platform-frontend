@@ -1,6 +1,7 @@
-import { ChevronDown, Hexagon, LogOut, Search } from 'lucide-react';
-import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { ChevronDown, LogOut, Menu, Search } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -9,20 +10,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { CommandPalette, OPEN_COMMAND_PALETTE } from '@/components/CommandPalette';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/features/auth/auth-context';
 import { useActiveOrg } from '@/features/organizations/active-org-context';
 import { ORG_TYPE_LABELS } from '@/lib/enums';
-import { cn } from '@/lib/utils';
-import { navGroupsForType } from './nav';
+import { SidebarContent } from './SidebarContent';
 
 export function DashboardLayout() {
   const { user, logout } = useAuth();
   const { activeOrg } = useActiveOrg();
   const navigate = useNavigate();
   const location = useLocation();
-  const navGroups = navGroupsForType(activeOrg?.type);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Close the mobile drawer whenever the route changes.
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
 
   const displayName =
     [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email || '';
@@ -38,82 +44,35 @@ export function DashboardLayout() {
     <div className="flex min-h-svh bg-background">
       <CommandPalette />
 
-      {/* ---- Sidebar ---- */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r bg-sidebar md:flex">
-        <div className="flex h-14 items-center gap-2.5 border-b px-5">
-          <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground glow-primary">
-            <Hexagon className="size-4" />
-          </div>
-          <span className="text-sm font-semibold tracking-tight">Developer Platform</span>
-        </div>
-
-        <LayoutGroup>
-          <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-4">
-            {navGroups.map((group, i) => (
-              <div key={group.label ?? i} className="flex flex-col gap-1">
-                {group.label && (
-                  <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
-                    {group.label}
-                  </p>
-                )}
-                {group.items.map(({ label, to, icon: Icon, end }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={end}
-                    className={({ isActive }) =>
-                      cn(
-                        'group relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
-                        isActive
-                          ? 'font-medium text-sidebar-accent-foreground'
-                          : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground',
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        {isActive && (
-                          <motion.span
-                            layoutId="active-nav"
-                            className="absolute inset-0 rounded-md bg-sidebar-accent"
-                            transition={{ type: 'spring', stiffness: 520, damping: 42 }}
-                          />
-                        )}
-                        <Icon
-                          className={cn(
-                            'relative z-10 size-4 transition-colors',
-                            isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
-                          )}
-                        />
-                        <span className="relative z-10">{label}</span>
-                      </>
-                    )}
-                  </NavLink>
-                ))}
-              </div>
-            ))}
-          </nav>
-        </LayoutGroup>
-
-        <div className="border-t px-5 py-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="relative flex size-1.5">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />
-              <span className="relative inline-flex size-1.5 rounded-full bg-success" />
-            </span>
-            All systems operational
-          </div>
-        </div>
+      {/* ---- Sidebar (persistent on desktop) ---- */}
+      <aside className="hidden w-64 shrink-0 border-r bg-sidebar md:block">
+        <SidebarContent orgType={activeOrg?.type} idSuffix="desktop" />
       </aside>
+
+      {/* ---- Sidebar (slide-in drawer on mobile) ---- */}
+      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+        <SheetContent side="left" className="w-72 p-0">
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <SidebarContent
+            orgType={activeOrg?.type}
+            idSuffix="mobile"
+            onNavigate={() => setMobileNavOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
 
       {/* ---- Main column ---- */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/70 px-4 backdrop-blur-md sm:px-6">
-          <div className="flex items-center gap-2 md:hidden">
-            <div className="flex size-6 items-center justify-center rounded bg-primary text-primary-foreground">
-              <Hexagon className="size-3.5" />
-            </div>
-          </div>
+          {/* Mobile: hamburger opens the navigation drawer. */}
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Open navigation menu"
+            className="-ml-1.5 flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground md:hidden"
+          >
+            <Menu className="size-5" />
+          </button>
           {activeOrg && (
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{activeOrg.name}</span>

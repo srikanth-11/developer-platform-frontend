@@ -2,6 +2,7 @@ import { ArrowRight, KeyRound, Store, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Reveal, RevealItem } from '@/components/Reveal';
 import { StatCard } from '@/components/StatCard';
+import { OPEN_COMMAND_PALETTE } from '@/components/CommandPalette';
 import { navItemsForType } from '@/components/layout/nav';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,7 +72,7 @@ export function DashboardPage() {
                 {primaryCta.label}
               </Link>
               <button
-                onClick={() => window.dispatchEvent(new Event('commandpalette:open'))}
+                onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE))}
                 className={cn(buttonVariants({ variant: 'outline' }))}
               >
                 Quick search
